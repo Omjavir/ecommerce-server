@@ -1,9 +1,11 @@
 import { asyncHandler } from "../utils/AsyncHandler.js";
 import { Product } from "../models/product.model.js";
+import { Category } from "../models/category.model.js";
 import {
   getLocalPath,
   getMongoosePaginationOptions,
   getStaticFilePath,
+  removeLocalFile,
 } from "../utils/helpers.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Category } from "../models/category.model.js";
@@ -35,7 +37,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
 });
 
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, description, category, image, price } = req.body;
+  const { name, description, category, price } = req.body;
 
   const categoryToBeAdded = await Category.findById(category);
 
@@ -43,12 +45,12 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Category does not exist");
   }
 
-  if (!image) {
+  if (!req.files?.image || !req.files?.image.length) {
     throw new ApiError(400, "Provide product image");
   }
 
   const imageUrl = getStaticFilePath(req, req.files?.image[0]?.filename);
-  const imageLocalPath = getLocalPath(req.files?.mainImage[0]?.filename);
+  const imageLocalPath = getLocalPath(req.files?.image[0]?.filename);
 
   const product = await Product.create({
     name,
@@ -66,4 +68,76 @@ const createProduct = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, product, "Product created successfully"));
 });
 
-export { getAllProducts, createProduct };
+const updateProduct = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, description, category, price } = req.body;
+
+  const product = await Product.findById(id);
+
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  const image = req.files?.image?.length
+    ? {
+        // If user has uploaded new image then we have to create an object with new url and local path in the project
+        url: getStaticFilePath(req, req.files?.image[0]?.filename),
+        localPath: getLocalPath(req.files?.image[0]?.filename),
+      }
+    : product.image; // if there is no new main image uploaded we will stay with the old main image of the product
+
+  const updatedProduct = await Product.findByIdAndUpdate(
+    id,
+    {
+      $set: {
+        name,
+        description,
+        category,
+        price,
+        image,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  // Once the product is updated. Do some cleanup
+  if (product.image.url !== image.url) {
+    // If user is uploading new main image remove the previous one because we don't need that anymore
+    removeLocalFile(product.image.localPath);
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedProduct, "Product updated successfully"));
+});
+
+const getProductById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const product = await Product.findById(id);
+
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, product, "Product fetched successfully"));
+});
+
+const getProductsByCategory = asyncHandler(async (req, res) => {
+  const { id } = req.category;
+  const { page = 1, limit = 10 } = req.query;
+
+  const category = await Category.findById(id).select("name _id");
+
+  if (!category) {
+    throw new ApiError(404, "Category not found");
+  }
+
+  
+});
+
+export { getAllProducts, createProduct, updateProduct, getProductById };
