@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
-// import { removeUnusedMulterImageFilesOnError } from "../utils/helpers.js";
+import { removeUnusedMulterImageFilesOnError } from "../utils/helpers.js";
 
 /**
  *

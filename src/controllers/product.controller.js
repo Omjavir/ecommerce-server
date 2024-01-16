@@ -1,6 +1,5 @@
 import { asyncHandler } from "../utils/AsyncHandler.js";
 import { Product } from "../models/product.model.js";
-import { Category } from "../models/category.model.js";
 import {
   getLocalPath,
   getMongoosePaginationOptions,

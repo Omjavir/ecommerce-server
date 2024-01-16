@@ -6,7 +6,7 @@ import { ApiError } from "../utils/ApiError.js";
 const createCategory = asyncHandler(async (req, res) => {
   const { name } = req.body;
 
-  const category = await Category.create(name);
+  const category = await Category.create({ name });
 
   return res
     .status(201)
