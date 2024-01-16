@@ -10,6 +10,7 @@ import {
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Category } from "../models/category.model.js";
 import { ApiError } from "../utils/ApiError.js";
+import mongoose from "mongoose";
 
 const getAllProducts = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
@@ -137,7 +138,71 @@ const getProductsByCategory = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Category not found");
   }
 
-  
+  const productAggregate = await Product.aggregate([
+    {
+      $match: {
+        category: new mongoose.Types.ObjectId(id),
+      },
+    },
+  ]);
+
+  const products = await Product.aggregatePaginate(
+    productAggregate,
+    getMongoosePaginationOptions({
+      page,
+      limit,
+      customLabels: {
+        totalDocs: "totalProducts",
+        docs: "products",
+      },
+    })
+  );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { ...products, category },
+        "Product's fetched successfully!"
+      )
+    );
 });
 
-export { getAllProducts, createProduct, updateProduct, getProductById };
+const deleteProduct = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const product = await Product.findOneAndDelete({
+    _id: id,
+  });
+
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  const productImage = [product.image];
+
+  productImage.map((image) => {
+    // Removing the image related to product that is being deleted
+    removeLocalFile(image.localPath);
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { deletedProduct: product },
+        "Product deleted successfully!"
+      )
+    );
+});
+
+export {
+  getAllProducts,
+  createProduct,
+  updateProduct,
+  getProductById,
+  getProductsByCategory,
+  deleteProduct,
+};
