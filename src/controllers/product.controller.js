@@ -10,6 +10,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Category } from "../models/category.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import mongoose from "mongoose";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const getAllProducts = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
@@ -49,19 +50,22 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Provide product image");
   }
 
-  const imageUrl = getStaticFilePath(req, req.files?.image[0]?.filename);
-  const imageLocalPath = getLocalPath(req.files?.image[0]?.filename);
+  const productImageLocalPath = req.files?.image[0]?.path;
+
+  const productImage = await uploadOnCloudinary(productImageLocalPath);
+
+  if (!productImage) {
+    throw new ApiError(400, "Provide a product image");
+  }
 
   const product = await Product.create({
     name,
     description,
     price,
     category,
-    image: {
-      url: imageUrl,
-      localPath: imageLocalPath,
-    },
+    image: productImage,
   });
+  
 
   return res
     .status(201)
@@ -128,9 +132,8 @@ const getProductById = asyncHandler(async (req, res) => {
 });
 
 const getProductsByCategory = asyncHandler(async (req, res) => {
-  const { id } = req.category;
+  const { id } = req.params;
   const { page = 1, limit = 10 } = req.query;
-
   const category = await Category.findById(id).select("name _id");
 
   if (!category) {
