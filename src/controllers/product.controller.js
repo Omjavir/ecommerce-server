@@ -18,6 +18,14 @@ const getAllProducts = asyncHandler(async (req, res) => {
     {
       $match: {},
     },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
   ]);
 
   const products = await Product.aggregatePaginate(
@@ -65,7 +73,6 @@ const createProduct = asyncHandler(async (req, res) => {
     category,
     image: productImage,
   });
-  
 
   return res
     .status(201)
@@ -148,24 +155,24 @@ const getProductsByCategory = asyncHandler(async (req, res) => {
     },
   ]);
 
-  const products = await Product.aggregatePaginate(
-    productAggregate,
-    getMongoosePaginationOptions({
-      page,
-      limit,
-      customLabels: {
-        totalDocs: "totalProducts",
-        docs: "products",
-      },
-    })
-  );
+  // const products = await Product.aggregatePaginate(
+  //   productAggregate,
+  //   getMongoosePaginationOptions({
+  //     page,
+  //     limit,
+  //     customLabels: {
+  //       totalDocs: "totalProducts",
+  //       docs: "products",
+  //     },
+  //   })
+  // );
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        { ...products, category },
+        { products: productAggregate },
         "Product's fetched successfully!"
       )
     );
