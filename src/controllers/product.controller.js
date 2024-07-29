@@ -13,7 +13,7 @@ import mongoose from "mongoose";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const getAllProducts = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 25 } = req.query;
   const productAggregate = Product.aggregate([
     {
       $match: {},
